@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+VERSION_TO_DOWNLOAD=$1
+TERRAFORM_INSTALL_DIR=$(which terraform)
+# TODO: Dynamically resolve the latest version from the Terraform website
+
+[[ -z "$VERSION_TO_DOWNLOAD" ]] && { echo "Please provide the version to download as the first argument to the command" ; exit 1; }
+
+function check_requirements() {
+    [[ -z "$TERRAFORM_INSTALL_DIR" ]] && { echo "Previous Terraform installation not found" ; exit 1; }
+
+    WGET_INSTALLED=$(which wget)
+    CURL_INSTALLED=$(which curl)
+    [[ -z "$WGET_INSTALLED" ]] && { echo "'wget' not installed. Please install it using the package manager of your OS" ; exit 1; }
+    [[ -z "$CURL_INSTALLED" ]] && { echo "cURL not installed. Please install it using the package manager of your OS" ; exit 1; }
+}
+
+function fetch_version(){
+    VERSION_TO_DOWNLOAD=$1
+    URL="https://releases.hashicorp.com/terraform/${VERSION_TO_DOWNLOAD}/terraform_${VERSION_TO_DOWNLOAD}_linux_amd64.zip"
+
+    TMPFILE=`mktemp`
+
+    wget ${URL} -q -O ${TMPFILE} || { echo "Unable to find Terraform version ${VERSION_TO_DOWNLOAD}"; exit 1; }
+    unzip -q -o -d $PWD ${TMPFILE}
+    rm ${TMPFILE}
+
+    cp $PWD/terraform ${TERRAFORM_INSTALL_DIR}
+
+}
+function get_current_version() {
+    TERRAFORM_VERSION_RAW=$(terraform -v)
+    TERRAFORM_VERSION_CLEAN=`echo "${TERRAFORM_VERSION_RAW}" | head -1`
+    echo ${TERRAFORM_VERSION_CLEAN}
+}
+
+echo "Updating Terraform..."
+
+# Step 1
+check_requirements
+
+echo "Current version was: " $(get_current_version)
+
+fetch_version "${VERSION_TO_DOWNLOAD}"
+
+echo "All done. Current version is now:" $(get_current_version)
